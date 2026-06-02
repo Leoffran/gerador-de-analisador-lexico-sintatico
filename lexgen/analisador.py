@@ -1,29 +1,7 @@
-from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional
 from copy import deepcopy
-
-# Nós da árvore
-class No:
-    pass
-
-@dataclass
-class NoChar(No):
-    char: str
-
-@dataclass
-class NoConcat(No):
-    esq: No
-    dir: No
-
-@dataclass
-class NoUniao(No):
-    esq: No
-    dir: No
-
-@dataclass
-class NoFecho(No):
-    filho: No
+from no import NoChar, NoConcat, NoFecho, NoUniao
 
 # Leitura do arquivo
 def ler_definicoes(caminho):

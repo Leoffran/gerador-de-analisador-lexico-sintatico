@@ -1,4 +1,4 @@
-from parser import parsear_er
+from analisador import parsear_er
 
 testes = [
     "a",
