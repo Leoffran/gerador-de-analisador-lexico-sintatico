@@ -28,6 +28,7 @@ def numerar_posicoes(no, contador = None):
         # se for concat ou união, chama primeiro o filho da esquerda
         numerar_posicoes(no.esq, contador)
         numerar_posicoes(no.dir, contador)
+    return contador.valor # retorna o número de nós da árvore
 
 def nullable(no):
     """Verifica se o nó pode gerar a palavra vazia"""
@@ -46,3 +47,110 @@ def nullable(no):
         # os dois nós forem anuláveis
         return nullable(no.esq) and nullable(no.dir)
     
+def firstpos(no):
+    """Retorna o conjunto de posições que podem ser a primeira de uma palavra"""
+    if isinstance(no, NoChar):
+        # se for um char, retorna sua posição "caso base"
+        # NoChar('a') pos=1  ->  firstpos = {1}
+        return {no.pos} # retorna um set pra garantir que não há repetição
+
+    if isinstance(no, NoFecho):
+        # se for nó fecho, retorna firstpos do filho
+        # ex: a* -> NoFecho(NoChar('a') pos=1)
+        # firstpos = firstpos(NoChar('a')) = {1}
+        return firstpos(no.filho)
+    
+    if isinstance(no, NoUniao):
+        # se for nó união, retorna a união dos firstpos dos filhos
+        # ex a|b -> NoUniao(NoChar('a') pos=1, NoChar('b') pos=2)
+        # firstpos = firstpos(a) ∪ firstpos(b) = {1} ∪ {2} = {1, 2}
+        return firstpos(no.esq) | firstpos(no.dir)
+    
+    if isinstance(no, NoConcat):
+        # se for um nó concat:
+        # se o esquerdo for anulável, o da direita também pode ser o primeiro
+        if nullable(no.esq):
+            return firstpos(no.esq) | firstpos(no.dir)
+        else:
+            # caso contrário só o esquerdo pode ser o primeiro
+            return firstpos(no.esq)
+        
+def lastpos(no):
+    """Retorna o conjunto de posições que podem ser a última de uma palavra"""
+    if isinstance(no, NoChar):
+        # se for um char, retorna sua posição "caso base"
+        return {no.pos}
+    
+    if isinstance(no, NoFecho):
+        # se for nó fecho, retorna o lastpos do filho
+        return lastpos(no.filho)
+    
+    if isinstance(no, NoUniao):
+        # se for nó união, retorna a união do lastpos dos filhos
+        return lastpos(no.esq) | lastpos(no.dir)
+    
+    if isinstance(no, NoConcat):
+        # se for um nó concat:
+        # se o da direita for anulável, o da esquerda também pode ser o último
+        if nullable(no.dir):
+            return lastpos(no.esq) | lastpos(no.dir)
+        else:
+            # caso contrário, só o da direita pode ser o último
+            return lastpos(no.dir)
+
+def followpos(no, tabela):
+    """Preenche a tabela de followpos para cada posição"""
+    # tabela = {pos: set de posições que podem vir depois}
+    if isinstance(no, NoChar):
+        return # caso base -> folha não gera followpos
+    
+    if isinstance(no, NoConcat):
+        # todos que terminam no esquerdo podem ser seguidos pelo primeiro do direito
+        for p in lastpos(no.esq):
+            # concatena
+            tabela[p] |= firstpos(no.dir)
+        # desce nos filhos
+        followpos(no.esq, tabela)
+        followpos(no.dir, tabela)
+    
+    if isinstance(no, NoFecho):
+        # quem termina no fecho pode ser seguido pelo primeiro do fecho
+        for p in lastpos(no.filho):
+            # concatena
+            tabela[p] |= firstpos(no.filho)
+        # desce no filho
+        followpos(no.filho, tabela)
+
+    if isinstance(no, NoUniao):
+        # união não gera followpos
+        # segue para os filhos:
+        followpos(no.esq, tabela)
+        followpos(no.dir, tabela)
+
+def calcular_followpos(ast, num_posicoes):
+    """Inicializa a tabela e chama followpos"""
+    # num_posicoes = número total de folhas da árvore (precisa saber pra criar a tabela)
+    # cada posição começa com um set vazio
+    tabela = {i: set() for i in range(1, num_posicoes + 1)}
+    followpos(ast, tabela) # preenche a tabela
+    return tabela
+
+def mapear_posicoes(no, mapa=None):
+    """Retorna um dicionário {pos: símbolo} para cada folha da árvore"""
+    # se não houver um mapa, cria
+    if mapa is None:
+        mapa = {}
+    # se o nó for um char, mapeia
+    if isinstance(no, NoChar):
+        mapa[no.pos] = no.char
+    
+    # se não: mapeia recursivamente os filhos
+    elif isinstance(no, NoFecho):
+        mapear_posicoes(no.filho, mapa)
+    elif isinstance(no, (NoConcat, NoUniao)):
+        mapear_posicoes(no.esq, mapa)
+        mapear_posicoes(no.dir, mapa)
+    return mapa
+
+def construir_afd(ast, nome_padrao):
+    """Constrói o AFD a partir da AST usando algoritmo de Aho"""

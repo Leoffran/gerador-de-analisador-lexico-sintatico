@@ -1,6 +1,7 @@
+from dataclasses import dataclass
+from copy import deepcopy
 from enum import Enum, auto
 from typing import Optional
-from copy import deepcopy
 from no import NoChar, NoConcat, NoFecho, NoUniao
 
 # Leitura do arquivo
