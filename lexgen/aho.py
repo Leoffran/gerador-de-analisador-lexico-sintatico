@@ -154,3 +154,72 @@ def mapear_posicoes(no, mapa=None):
 
 def construir_afd(ast, nome_padrao):
     """Constrói o AFD a partir da AST usando algoritmo de Aho"""
+    # nome_padrao é o nome da ER
+
+    # prepara a árvore:
+    # concatena # no final da ER
+    ast = aumentar_er(ast)
+    # percorre a árvore e numera cada folha
+    num_pos = numerar_posicoes(ast)
+    # percorre a árvore e cria um dicionário {posição : símbolo}
+    mapa = mapear_posicoes(ast)
+    # calcula o followpos de todos os elementos da árvore
+    tabela_fp = calcular_followpos(ast, num_pos)
+
+    # posição do '#' é a última
+    pos_hash = num_pos
+
+    # percorre o dicionário pra pegar todas as letras do alfabeto
+    alfabeto = {mapa[p] for p in mapa if mapa[p] != '#'}
+
+    # estado inicial = firstpos da raiz
+    # como set() não pode ser utilizado como chave do dicionário:
+    # é preciso utilizar frozenset(), que funciona da mesma maneira
+    # mas não pode ser modificado após ser criado
+    estado_inicial = frozenset(firstpos(ast))
+
+    # estrutura do AFD
+    visitados = set()
+    estados = set()
+    transicoes = {}
+    aceitacao = {}
+
+    fila = [estado_inicial]
+
+    while fila:
+        # pega o próximo estado a processar
+        estado_atual = fila.pop(0)
+
+        # se ele já foi visitado, pula
+        if estado_atual in visitados:
+            continue
+        
+        # adiciona aos estados visitados
+        visitados.add(estado_atual)
+        estados.add(estado_atual)
+
+        # se o estado contém '#' -> é de aceitação
+        if pos_hash in estado_atual:
+            # para formar <lexema, nome padrão>
+            aceitacao[estado_atual] = nome_padrao
+        
+        # calcula as transições para cada símbolo do alfabeto
+        for simbolo in alfabeto:
+            # filtra as posições do estado atual que tem o símbolo atual
+            posicoes = {p for p in estado_atual if mapa[p] == simbolo}
+
+            # sem transição
+            if not posicoes:
+                continue
+
+            # próximo estado = união dos followpos dessas posições
+            proximo = frozenset(p for pos in posicoes for p in tabela_fp[pos])
+            
+            # guarda a transição
+            transicoes[(estado_atual, simbolo)] = proximo
+
+            # adiciona na fila
+            if proximo not in visitados:
+                fila.append(proximo)
+    
+    return Automato(estados, alfabeto, transicoes, estado_inicial, aceitacao)
