@@ -1,22 +1,16 @@
+# main.py
 from analisador import parsear_er
 from aho import construir_afd
+from minimizacao import minimizar
+from uniao import uniao
 
-testes = [
-    ("a",        "a"),
-    ("a|b",      "a_ou_b"),
-    ("a*",       "fecho"),
-    ("a(a|b)*",  "id"),
-    ("(a|b)*abb","abb"),
-]
+afd1 = minimizar(construir_afd(parsear_er("[a-zA-Z]([a-zA-Z]|[0-9])*"), "id"))
+afd2 = minimizar(construir_afd(parsear_er("[1-9]([0-9])*|0"), "num"))
 
-for er, nome in testes:
-    print(f"\nER: {er}")
-    ast = parsear_er(er)
-    afd = construir_afd(ast, nome)
-    print(f"estados:   {afd.estados}")
-    print(f"alfabeto:  {afd.alfabeto}")
-    print(f"inicial:   {afd.start}")
-    print(f"aceitacao: {afd.aceitacao}")
-    print(f"transicoes:")
-    for (estado, simbolo), destino in afd.transicoes.items():
-        print(f"  {set(estado)} --{simbolo}--> {set(destino)}")
+afnd = uniao(afd1, afd2)
+print(f"estados:   {afnd.estados}")
+print(f"inicial:   {afnd.start}")
+print(f"aceitacao: {afnd.aceitacao}")
+print(f"transicoes:")
+for (estado, simbolo), destinos in afnd.transicoes.items():
+    print(f"  {estado} --{simbolo}--> {destinos}")
