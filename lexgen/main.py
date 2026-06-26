@@ -4,26 +4,31 @@ from aho import construir_afd
 from minimizacao import minimizar
 from uniao import uniao
 from determinizacao import determinizar
-from lexer import lexer
+from lexer import lexer, salvar_tokens
 
-# monta o AFD final
-afd1 = minimizar(construir_afd(parsear_er("[a-zA-Z]([a-zA-Z]|[0-9])*"), "id"))
-afd2 = minimizar(construir_afd(parsear_er("[1-9]([0-9])*|0"), "num"))
+# lê as definições do arquivo
+defs = ler_definicoes('testes/exemplo1.er')
 
-afnd = uniao(afd1, afd2)
+# monta um AFD para cada definição
+afds = []
+for nome, er in defs:
+    ast = parsear_er(er)
+    afd = minimizar(construir_afd(ast, nome))
+    afds.append(afd)
+
+# une e determiniza
+afnd = uniao(*afds)
 afd  = determinizar(afnd)
 
-# testa
-testes = [
-    "a1 0 teste2 21 alpha123 3444 a43teste",
-    "abc@",
-    "abc@@",
-    "0 1 2 3",
-    "abc 123 @@@",
-]
+# lê o texto fonte inteiro
+texto  = open('testes/exemplo1.txt').read()
 
-for texto in testes:
-    print(f"\ntexto: '{texto}'")
-    tokens = lexer(afd, texto)
-    for lexema, padrao in tokens:
-        print(f"  <{lexema}, {padrao}>")
+# tokeniza
+tokens = lexer(afd, texto)
+
+# imprime na tela
+for lexema, padrao in tokens:
+    print(f"<{lexema}, {padrao}>")
+
+# salva no arquivo
+salvar_tokens(tokens)

@@ -72,3 +72,9 @@ def lexer(afd, texto):
             tokens.append((lexema, 'erro!'))
 
     return tokens
+
+def salvar_tokens(tokens):
+    """Salva os tokens no arquivo de saída"""
+    with open('../tokens.txt', 'w') as f:
+        for lexema, padrao in tokens:
+            f.write(f"<{lexema}, {padrao}>\n")
