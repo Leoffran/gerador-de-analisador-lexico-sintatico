@@ -42,11 +42,10 @@ def determinizar(afnd):
         visitados.add(estado_atual)
         estados.add(estado_atual)
 
-        # verifica se o estado é de aceitação
-        for estado in estado_atual:
-            if estado in afnd.aceitacao:
-                aceitacao[estado_atual] = afnd.aceitacao[estado]
-                break
+        # verifica se o estado é de aceitação; menor ID = padrão definido primeiro (prioridade)
+        aceitando = [e for e in estado_atual if e in afnd.aceitacao]
+        if aceitando:
+            aceitacao[estado_atual] = afnd.aceitacao[min(aceitando)]
         
         # calcula transições para cada símbolo
         for simbolo in afnd.alfabeto:

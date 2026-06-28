@@ -91,14 +91,16 @@ class TelaExecucao(ttk.Frame):
             messagebox.showerror("Erro", str(e))
 
     def executar_sintatico(self):
-        self.escrever(
-            self.txt_parsing,
-            "Analisador sintático ainda não implementado."
-        )
-        self.notebook.select(1)
-        #Depois basta trocar por:
-        #resultado = self.controlador.analisar_sintatico(codigo)
-        #self.escrever(self.txt_parsing, resultado)
+        codigo = self.editor.get("1.0", tk.END).strip()
+        if codigo == "":
+            messagebox.showwarning("Aviso", "Digite um código.")
+            return
+        try:
+            resultado = self.controlador.analisar_sintatico(codigo)
+            self.escrever(self.txt_parsing, resultado)
+            self.notebook.select(1)
+        except Exception as e:
+            messagebox.showerror("Erro", str(e))
     
     # metodo auxiliar para limpar o editor e os resultados
     def escrever(self, widget, texto):
