@@ -91,17 +91,20 @@ class Token:
 def tokenizar(er):
     """Converte a ER em uma lista de tokens"""
     tokens = []
-    # Para cada char na expressão regular
-    for ch in er:
-        # se for um operador adiciona aos tokens
-        if ch in OPERADORES:
+    i = 0
+    while i < len(er):
+        ch = er[i]
+        # \x escapa o próximo caractere como literal
+        if ch == '\\' and i + 1 < len(er):
+            i += 1
+            tokens.append(Token(TipoToken.CHAR, er[i]))
+        elif ch in OPERADORES:
             tokens.append(Token(OPERADORES[ch]))
-        # se for épsilon adiciona aos tokens
         elif ch == '&':
             tokens.append(Token(TipoToken.CHAR, '&'))
-        # se for qualquer outro char, adiciona aos tokens
         elif ch != ' ':
             tokens.append(Token(TipoToken.CHAR, ch))
+        i += 1
     return tokens
 
 def inserir_concat(tokens):

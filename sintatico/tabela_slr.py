@@ -1,13 +1,21 @@
 def construir_tabela_slr(colecao, goto_map, follow_sets, prods_aug, inicial_aug):
-    """Algoritmo 4.46 (slide p.70-71): constrói ACTION e GOTO do SLR.
+    """Tabela SLR — Aho Algoritmo 4.38.
+
+    Para cada estado i e item [A → α · a β] com 'a' terminal: ACTION[i,a] = shift j
+      onde j = GOTO(Ii, a).
+    Para cada estado i e item [A → α ·] com A ≠ S': ACTION[i,a] = reduce A → α
+      para todo a ∈ FOLLOW(A).
+    Para o item [S' → S ·]: ACTION[i,$] = accept.
+    Para GOTO(Ii, A) = j com A não-terminal: GOTO[i,A] = j.
+    Conflitos (shift/reduce ou reduce/reduce) indicam gramática não-SLR(1).
 
     Retorna (tabela_acao, tabela_goto, conflitos, prods_originais).
-      tabela_acao — {(estado, terminal): ('shift',j) | ('reduce',idx) | ('accept',)}
-      tabela_goto — {(estado, nao_terminal): estado}
-      conflitos   — lista de strings descrevendo conflitos shift/reduce ou reduce/reduce
-      prods_originais — [(esq, dir_tupla), ...] sem a produção aumentada S' → S
     """
+    # não-terminais = todos os lados esquerdos das produções aumentadas
     nao_terminais = {esq for esq, _ in prods_aug}
+
+    # descarta a produção aumentada S' → S; as demais são as produções originais
+    # o índice aqui é o número da redução: r0, r1, r2, ...
     prods_originais = prods_aug[1:]
 
     tabela_acao = {}
@@ -15,6 +23,7 @@ def construir_tabela_slr(colecao, goto_map, follow_sets, prods_aug, inicial_aug)
     conflitos = []
 
     def registrar_acao(chave, valor):
+        # detecta conflito: shift/reduce ou reduce/reduce
         if chave in tabela_acao and tabela_acao[chave] != valor:
             conflitos.append(
                 f"conflito em estado {chave[0]}, símbolo '{chave[1]}': "
@@ -22,24 +31,34 @@ def construir_tabela_slr(colecao, goto_map, follow_sets, prods_aug, inicial_aug)
             )
         tabela_acao[chave] = valor
 
-    # Passo 2a e 3: shift e goto a partir do goto_map
+    # passo 2a e 3: percorre o goto_map construído pela coleção canônica
     for (i, X), j in goto_map.items():
         if X in nao_terminais:
+            # passo 3: GOTO para não-terminais
+            # ex: estado 0 --<E>--> estado 1   →   GOTO[0, <E>] = 1
             tabela_goto[(i, X)] = j
         else:
+            # passo 2a: shift para terminais
+            # ex: estado 0 --id--> estado 5   →   ACTION[0, id] = shift 5
             registrar_acao((i, X), ('shift', j))
 
-    # Passos 2b e 2c: reduce e accept a partir dos itens com ponto no fim
+    # passos 2b e 2c: percorre todos os itens com ponto no final
     for i, I in enumerate(colecao):
         for esq, dir, dot in I:
+            # ponto no final significa que o corpo foi reconhecido
             if dot < len(dir):
                 continue
+
             if esq == inicial_aug:
+                # passo 2c: item [S' → S ·]  →  accept
                 registrar_acao((i, '$'), ('accept',))
             else:
+                # passo 2b: item [A → α ·]  →  reduce para todo símbolo em FOLLOW(A)
+                # descobre qual é o índice da produção entre as originais
                 prod = (esq, dir)
                 idx = next(j for j, p in enumerate(prods_originais) if p == prod)
                 for a in follow_sets.get(esq, set()):
+                    # ex: FOLLOW(<E>) = {$, +}  →  ACTION[i, $] = r0,  ACTION[i, +] = r0
                     registrar_acao((i, a), ('reduce', idx))
 
     return tabela_acao, tabela_goto, conflitos, prods_originais

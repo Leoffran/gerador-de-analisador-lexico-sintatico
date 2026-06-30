@@ -15,7 +15,7 @@ def _first_cadeia(simbolos, first_sets, nao_terminais):
 
 
 def first(producoes, nao_terminais):
-    """Computa FIRST para todos os não-terminais (seção 4.4.2). Retorna {nt: set}."""
+    """Computa FIRST para todos os não-terminais. Retorna {nt: set}."""
     sets = {nt: set() for nt in nao_terminais}
 
     changed = True
@@ -31,7 +31,7 @@ def first(producoes, nao_terminais):
 
 
 def follow(producoes, nao_terminais, first_sets, inicial):
-    """Computa FOLLOW para todos os não-terminais (seção 4.4.2). Retorna {nt: set}."""
+    """Computa FOLLOW para todos os não-terminais. Retorna {nt: set}."""
     sets = {nt: set() for nt in nao_terminais}
     sets[inicial].add('$')
 

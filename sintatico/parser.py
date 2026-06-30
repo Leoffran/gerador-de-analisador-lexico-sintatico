@@ -1,5 +1,5 @@
 def parsear(tokens, tabela_acao, tabela_goto, producoes):
-    """Algoritmo LR com pilha de estados (slide p.53/56, alg. 4.44).
+    """Algoritmo LR com pilha de estados.
 
     tokens    — lista de (lexema, padrao) do analisador léxico
     producoes — lista de (esq, dir_tupla) sem a produção aumentada

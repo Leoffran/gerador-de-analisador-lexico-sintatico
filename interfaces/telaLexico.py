@@ -1,7 +1,10 @@
 from tkinter import *
 from tkinter import ttk, messagebox, filedialog
 import tkinter as tk
+import os
 from analisador import ler_definicoes
+
+_TESTES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'testes'))
 
 
 class TelaLexico(ttk.Frame):
@@ -23,6 +26,7 @@ class TelaLexico(ttk.Frame):
     def carregar_arquivo(self):
         caminho = filedialog.askopenfilename(
             title="Abrir arquivo de definições regulares",
+            initialdir=_TESTES_DIR,
             filetypes=[("Definições Regulares", "*.er"), ("Todos os arquivos", "*.*")]
         )
         if not caminho:
@@ -38,6 +42,7 @@ class TelaLexico(ttk.Frame):
     def gerar(self):
         self.controlador.expressoes.clear()
 
+        # lê cada linha do editor no formato "nome: expressão"
         linhas = self.editor.get("1.0", "end").splitlines()
         for linha in linhas:
             if ":" not in linha:
@@ -68,35 +73,36 @@ class TelaLexico(ttk.Frame):
         self.nb_tabelas = ttk.Notebook(self)
         self.nb_tabelas.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
+        # uma aba para cada AFD minimizado individual
         for nome, afd in self.controlador.afds.items():
             frame = ttk.Frame(self.nb_tabelas)
             self.nb_tabelas.add(frame, text=nome)
             self._renderizar_tabela(frame, afd)
 
+        # aba extra com o AFD final (união determinizada de todos)
         frame_final = ttk.Frame(self.nb_tabelas)
         self.nb_tabelas.add(frame_final, text="Tabela Léxica Final")
         self._renderizar_tabela(frame_final, self.controlador.afd, mostrar_padrao=True)
 
     def _renderizar_tabela(self, frame, automato, mostrar_padrao=False):
         simbolos = sorted(automato.alfabeto)
-        colunas = ["Estado"] + simbolos + (["Padrão"] if mostrar_padrao else [])
+        colunas  = ["Estado"] + simbolos + (["Padrão"] if mostrar_padrao else [])
 
         tree = ttk.Treeview(frame, columns=colunas, show="headings")
-
         for col in colunas:
             tree.heading(col, text=col)
             tree.column(col, width=60, anchor="center", minwidth=40)
         tree.column("Estado", width=80, anchor="center")
 
-        sb_v = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        sb_v = ttk.Scrollbar(frame, orient="vertical",   command=tree.yview)
         sb_h = ttk.Scrollbar(frame, orient="horizontal", command=tree.xview)
         tree.configure(yscrollcommand=sb_v.set, xscrollcommand=sb_h.set)
-
         sb_v.pack(side="right", fill="y")
         sb_h.pack(side="bottom", fill="x")
         tree.pack(fill="both", expand=True)
 
         for estado in sorted(automato.estados):
+            # marca visualmente o estado inicial (→) e os de aceitação (*)
             prefixo = ""
             if estado == automato.start:
                 prefixo += "→ "
@@ -110,6 +116,7 @@ class TelaLexico(ttk.Frame):
                 celulas.append(str(destino) if destino is not None else "-")
 
             if mostrar_padrao:
+                # na tabela final, a coluna Padrão mostra qual token esse estado reconhece
                 celulas.append(automato.aceitacao.get(estado, ""))
 
             tree.insert("", "end", values=celulas)

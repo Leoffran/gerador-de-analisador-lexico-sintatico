@@ -52,7 +52,7 @@ class TelaExecucao(ttk.Frame):
 
         self.notebook.add(frame_tokens, text="Tokens")
 
-        self.txt_tokens = tk.Text(frame_tokens, state="disabled")
+        self.txt_tokens = tk.Text(frame_tokens, state="disabled", font=("Courier", 10))
 
         self.txt_tokens.pack(fill="both", expand=True)
 
@@ -64,8 +64,17 @@ class TelaExecucao(ttk.Frame):
 
         self.notebook.add(frame_parsing, text="Parsing / Erros")
 
-        self.txt_parsing = tk.Text(frame_parsing, state="disabled")
-
+        sb_h = ttk.Scrollbar(frame_parsing, orient="horizontal")
+        sb_v = ttk.Scrollbar(frame_parsing, orient="vertical")
+        self.txt_parsing = tk.Text(
+            frame_parsing, state="disabled", font=("Courier", 10),
+            wrap="none",
+            xscrollcommand=sb_h.set, yscrollcommand=sb_v.set
+        )
+        sb_h.config(command=self.txt_parsing.xview)
+        sb_v.config(command=self.txt_parsing.yview)
+        sb_v.pack(side="right", fill="y")
+        sb_h.pack(side="bottom", fill="x")
         self.txt_parsing.pack(fill="both", expand=True)
 
     def executar_lexico(self):

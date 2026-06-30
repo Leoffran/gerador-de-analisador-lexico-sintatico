@@ -1,6 +1,0 @@
-if
-while
-ifx
-whileloop
-x
-42

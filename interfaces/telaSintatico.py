@@ -1,6 +1,9 @@
 from tkinter import *
 from tkinter import ttk, messagebox, filedialog
 import tkinter as tk
+import os
+
+_TESTES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'testes'))
 
 
 class TelaSintatico(ttk.Frame):
@@ -29,6 +32,7 @@ class TelaSintatico(ttk.Frame):
     def _carregar_arquivo(self):
         caminho = filedialog.askopenfilename(
             title="Abrir arquivo de gramática",
+            initialdir=_TESTES_DIR,
             filetypes=[("Gramática", "*.g *.txt"), ("Todos os arquivos", "*.*")]
         )
         if not caminho:
@@ -45,13 +49,21 @@ class TelaSintatico(ttk.Frame):
             messagebox.showerror("Erro ao carregar", str(e))
 
     def _parsear_arquivo(self, conteudo):
-        """Separa seções [keywords] e [grammar]. Se não houver seções, tudo é gramática."""
+        """Separa o arquivo em duas seções: [grammar] e [keywords].
+
+        O arquivo .g pode ter duas seções marcadas por cabeçalhos:
+          [keywords]    — palavras reservadas, uma por linha
+          [grammar]     — produções no formato <NT> ::= ...
+
+        Se não houver seções, tudo é tratado como gramática.
+        """
         if '[grammar]' not in conteudo:
+            # arquivo simples sem seções: tudo é gramática
             return conteudo.strip(), ''
 
         secao_keywords = ''
-        secao_grammar = ''
-        secao_atual = None
+        secao_grammar  = ''
+        secao_atual    = None
 
         for linha in conteudo.splitlines():
             stripped = linha.strip()
@@ -62,7 +74,7 @@ class TelaSintatico(ttk.Frame):
             elif secao_atual == 'keywords':
                 secao_keywords += linha + '\n'
             elif secao_atual == 'grammar':
-                secao_grammar += linha + '\n'
+                secao_grammar  += linha + '\n'
 
         return secao_grammar.strip(), secao_keywords.strip()
 
@@ -72,6 +84,7 @@ class TelaSintatico(ttk.Frame):
             messagebox.showwarning("Aviso", "Digite uma gramática.")
             return
 
+        # coleta palavras reservadas do editor secundário
         texto_pr = self.editor_pr.get("1.0", "end").strip()
         palavras_reservadas = [p.strip() for p in texto_pr.splitlines() if p.strip()]
 
@@ -84,6 +97,7 @@ class TelaSintatico(ttk.Frame):
         self._mostrar_resultado(conflitos)
 
     def _mostrar_resultado(self, conflitos):
+        # destrói o resultado anterior antes de exibir o novo
         if self._frame_resultado:
             self._frame_resultado.destroy()
 
@@ -109,23 +123,45 @@ class TelaSintatico(ttk.Frame):
             txt.config(state="disabled")
             txt.pack(fill="x", pady=(0, 5))
 
+        # exibe FIRST/FOLLOW antes da tabela SLR
+        self._renderizar_first_follow(self._frame_resultado)
         self._renderizar_tabela_slr(self._frame_resultado)
+
+    def _renderizar_first_follow(self, parent):
+        _, nao_terminais, _, _ = self.controlador.gramatica
+        first_sets  = self.controlador.first
+        follow_sets = self.controlador.follow
+        nts = sorted(nao_terminais)
+
+        Label(parent, text="FIRST e FOLLOW", font=("Arial", 9, "bold"), anchor="w").pack(anchor="w", pady=(6, 0))
+
+        # altura proporcional ao número de não-terminais (2 blocos: FIRST e FOLLOW)
+        txt = Text(parent, height=len(nts) * 2 + 1, font=("Courier", 9), state="normal")
+        for nt in nts:
+            first_str = ', '.join(sorted(first_sets[nt]))
+            txt.insert("end", f"FIRST ({nt}) = {{ {first_str} }}\n")
+        txt.insert("end", "\n")
+        for nt in nts:
+            follow_str = ', '.join(sorted(follow_sets[nt]))
+            txt.insert("end", f"FOLLOW({nt}) = {{ {follow_str} }}\n")
+        txt.config(state="disabled")
+        txt.pack(fill="x", pady=(0, 6))
 
     def _renderizar_tabela_slr(self, parent):
         tabela_acao, tabela_goto, prods = self.controlador.tabela_slr
         _, nao_terminais, terminais, _ = self.controlador.gramatica
         n_estados = len(self.controlador.itens_lr)
 
+        # colunas da tabela: terminais (ação) à esquerda, não-terminais (desvio) à direita
         terminais_ord = sorted(terminais) + ['$']
-        nts_ord = sorted(nao_terminais)
-
-        colunas = ["Estado"] + terminais_ord + nts_ord
+        nts_ord       = sorted(nao_terminais)
+        colunas   = ["Estado"] + terminais_ord + nts_ord
         cabecalhos = ["Estado"] + [f"{t}" for t in terminais_ord] + [f"{nt}" for nt in nts_ord]
 
         frame = ttk.Frame(parent)
         frame.pack(fill="both", expand=True)
 
-        # legenda das produções
+        # legenda numerando as produções para facilitar a leitura das ações "r0", "r1", ...
         legenda = "Produções:  " + "   ".join(
             f"r{i}: {e} ::= {' '.join(d) if d else 'ε'}"
             for i, (e, d) in enumerate(prods)
@@ -133,12 +169,12 @@ class TelaSintatico(ttk.Frame):
         Label(frame, text=legenda, font=("Courier", 8), anchor="w", justify="left",
               wraplength=700).pack(anchor="w", padx=4, pady=(4, 2))
 
-        # separador ação / desvio
+        # cabeçalho duplo: "ação" sobre os terminais, "desvio" sobre os não-terminais
         n_term = len(terminais_ord)
         sep_frame = ttk.Frame(frame)
         sep_frame.pack(fill="x")
         Label(sep_frame, text="").grid(row=0, column=0, padx=2)
-        Label(sep_frame, text="ação", font=("Arial", 9, "bold")).grid(
+        Label(sep_frame, text="ação",   font=("Arial", 9, "bold")).grid(
             row=0, column=1, columnspan=n_term)
         Label(sep_frame, text="desvio", font=("Arial", 9, "bold")).grid(
             row=0, column=1 + n_term, columnspan=len(nts_ord))
@@ -157,10 +193,14 @@ class TelaSintatico(ttk.Frame):
         tree.pack(fill="both", expand=True)
 
         def fmt_acao(v):
-            if v is None:              return ""
-            if v[0] == 'shift':        return f"s{v[1]}"
-            if v[0] == 'reduce':       return f"r{v[1]}"
-            if v[0] == 'accept':       return "acc"
+            # converte as tuplas internas para a notação clássica do livro
+            # ('shift', 3)   →  "s3"
+            # ('reduce', 1)  →  "r1"
+            # ('accept',)    →  "acc"
+            if v is None:           return ""
+            if v[0] == 'shift':     return f"s{v[1]}"
+            if v[0] == 'reduce':    return f"r{v[1]}"
+            if v[0] == 'accept':    return "acc"
             return str(v)
 
         for i in range(n_estados):

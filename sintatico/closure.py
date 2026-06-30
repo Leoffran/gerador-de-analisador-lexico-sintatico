@@ -1,5 +1,5 @@
 def closure(itens, producoes):
-    """Fecha um conjunto de itens LR(0) (figura 4.32 / slide p.64).
+    """Fecha um conjunto de itens LR(0).
 
     Itens têm a forma (esq, dir_tupla, dot).
     Produções épsilon usam dir_tupla = () — ponto já no fim desde o início.
@@ -24,7 +24,7 @@ def closure(itens, producoes):
 
 
 def goto(itens, simbolo, producoes):
-    """Transição de um conjunto de itens por um símbolo (figura 4.33 / slide p.65)."""
+    """Transição de um conjunto de itens por um símbolo."""
     movidos = set()
     for esq, dir, dot in itens:
         if dot < len(dir) and dir[dot] == simbolo:
@@ -35,7 +35,7 @@ def goto(itens, simbolo, producoes):
 
 
 def colecao_canonica(producoes, inicial):
-    """Constrói a coleção canônica LR(0) (slide p.67).
+    """Constrói a coleção canônica LR(0).
 
     Retorna (colecao, goto_map, prods_aug, inicial_aug).
       colecao  — lista de frozenset de itens, índice = número do estado
