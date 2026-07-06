@@ -1,74 +1,48 @@
 from automato import Automato
 
 def lexer(afd, texto):
-    """Tokeniza o texto fonte usando o AFD final"""
+    """Tokeniza o texto fonte usando o AFD final (regra do maximal munch)."""
     # Retorna uma lista de tuplas <Lexema, Nome Padrão> ou <Lexema, 'erro!'>
     tokens = []
-    # começa no estado inicial
-    estado = afd.start 
-    # acumula o lexema atual
-    lexema = ''
-    # posição no texto
     i = 0
+    n = len(texto)
 
-    # varre o texto
-    while i < len(texto):
-        # pega a letra atual
+    while i < n:
         ch = texto[i]
 
-        # espaços e quebras de linha separam tokens -> emite!
+        # espaços e quebras de linha só separam tokens, não fazem parte de nenhum
         if ch in ' \n\t':
-            if lexema:
-                # emite o token acumulado
-                if estado in afd.aceitacao:
-                    tokens.append((lexema, afd.aceitacao[estado]))
-                else:
-                    tokens.append((lexema, 'erro!'))
-                # limpa pra próxima iteração
-                lexema = ''
-                estado = afd.start
-            # avança
-            i += 1 
-            continue
-        
-        # se não for final do token, tenta transicionar
-        proximo = afd.transicoes.get((estado, ch))
-
-        # se existe transição:
-        if proximo is not None:
-            # acumula e avança
-            lexema += ch
-            estado = proximo
             i += 1
-        
-        # se não existe transição: emite oque acumulou
-        # (encontrou um caractere que não pertence ao token atual) -> emite
-        # ex: depois de acumular 'abc', recebeu '!' sem transição -> emite <abc, id>
-        else:
-            # se há algo acumulado até agora:
-            if lexema:
-                # se for aceito: emite e reinicia
-                if estado in afd.aceitacao:
-                    tokens.append((lexema, afd.aceitacao[estado]))
-                # se não for aceito: emite o acumulado e erro
-                else:
-                    tokens.append((lexema, 'erro!'))
-                # reinicia para a próxima iteração
-                lexema = ''
-                estado = afd.start
-            # se não há nada acumulado:
-            else:
-                # caractere invalido sozinho:
-                tokens.append((ch, 'erro!'))
-                i += 1
+            continue
 
-    # o texto acabou mas ainda há lexema acumulado que não foi emitido
-    # isso acontece quando o texto termina sem espaço ou quebra de linha
-    # ex: "abc" -> loop termina com lexema = 'abc' sem ser transmitido
-    if lexema:
-        if estado in afd.aceitacao:
-            tokens.append((lexema, afd.aceitacao[estado]))
+        # tenta casar o maior prefixo possível a partir de i (maximal munch)
+        estado = afd.start
+        j = i
+        pos_aceite = None      # última posição em que o AFD passou por aceitação
+        padrao_aceite = None
+
+        while j < n and texto[j] not in ' \n\t':
+            proximo = afd.transicoes.get((estado, texto[j]))
+            if proximo is None:
+                break
+            estado = proximo
+            j += 1
+            if estado in afd.aceitacao:
+                # atualiza o melhor casamento visto até agora
+                pos_aceite = j
+                padrao_aceite = afd.aceitacao[estado]
+
+        if pos_aceite is not None:
+            # emite o maior lexema aceito e retoma a busca a partir dele
+            tokens.append((texto[i:pos_aceite], padrao_aceite))
+            i = pos_aceite
+        elif j > i:
+            # consumiu caracteres válidos no AFD, mas nunca passou por aceitação
+            tokens.append((texto[i:j], 'erro!'))
+            i = j
         else:
-            tokens.append((lexema, 'erro!'))
+            # nem o primeiro caractere tem transição válida
+            tokens.append((texto[i], 'erro!'))
+            i += 1
 
     return tokens

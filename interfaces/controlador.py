@@ -46,6 +46,7 @@ class Controlador:
         self.follow      = None       # {símbolo: set} — conjuntos FOLLOW
         self.itens_lr    = None       # coleção canônica de itens LR(0)
         self.tabela_slr  = None       # (tabela_acao, tabela_goto, prods_originais)
+        self.conflitos   = []         # conflitos shift/reduce ou reduce/reduce da última tabela
         self._tabela_simbolos = None  # TabelaSimbolos da última análise
 
     def adicionar_er(self, nome, er):
@@ -103,6 +104,7 @@ class Controlador:
         self.follow     = follow_sets
         self.itens_lr   = colecao
         self.tabela_slr = (tabela_acao, tabela_goto_t, prods_orig)
+        self.conflitos  = conflitos
         self._tabela_simbolos = TabelaSimbolos(palavras_reservadas)
 
         return conflitos
@@ -123,6 +125,11 @@ class Controlador:
             raise Exception("Primeiro gere o analisador léxico.")
         if self.tabela_slr is None:
             raise Exception("Primeiro gere o analisador sintático.")
+        if self.conflitos:
+            raise Exception(
+                "A gramática possui conflitos SLR(1) (veja a aba Projeto Sintático); "
+                "corrija a gramática antes de executar o parser."
+            )
 
         tokens_brutos = lexer(self.afd, codigo)
 
